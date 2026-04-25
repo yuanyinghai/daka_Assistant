@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智能学习管理助手 - 演示版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        /* 页面容器 */
+        .page {
+            display: none;
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* 登录页 */
+        .login-page {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            display: flex;
+            flex-direction: column;
+            padding: 40px 24px;
+        }
+
+        .login-header {
+            padding-top: 60px;
+            margin-bottom: 40px;
+        }
+
+        .login-header h1 {
+            font-size: 32px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: rgba(255,255,255,0.8);
+            font-size: 16px;
+        }
+
+        .login-form {
+            background: #fff;
+            border-radius: 24px;
+            padding: 32px 24px;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            background: #f5f7fa;
+            border-radius: 16px;
+            padding: 0 16px;
+            margin-bottom: 16px;
+        }
+
+        .input-icon {
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        .input-field {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 16px 0;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+
+        .link-text {
+            text-align: center;
+            margin-top: 24px;
+            color: #909399;
+            font-size: 14px;
+        }
+
+        .link-text a {
+            color: #4ecdc4;
+            text-decoration: none;
+        }
+
+        /* 角色选择 */
+        .role-select {
+            margin-bottom: 20px;
+        }
+
+        .role-label {
+            font-size: 14px;
+            color: #606266;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .role-options {
+            display: flex;
+            gap: 12px;
+        }
+
+        .role-option {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: #f5f7fa;
+            border-radius: 16px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .role-option.active {
+            background: #e8f8f5;
+            border-color: #4ecdc4;
+        }
+
+        .role-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .role-text {
+            font-size: 14px;
+            color: #606266;
+        }
+
+        /* 首页 */
+        .home-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 24px;
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: #fff;
+        }
+
+        .greeting h2 {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        .greeting p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .star-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+        }
+
+        .star-badge span {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* 打卡卡片 */
+        .checkin-card {
+            margin: -24px 16px 16px;
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+
+        .checkin-days .number {
+            font-size: 40px;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        .checkin-days .label {
+            font-size: 16px;
+            color: #606266;
+            margin-left: 4px;
+        }
+
+        .checkin-tip {
+            font-size: 12px;
+            color: #909399;
+            margin-top: 4px;
+        }
+
+        .btn-checkin {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: #fff;
+            border: none;
+            border-radius: 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* 今日任务 */
+        .section {
+            padding: 0 16px;
+            margin-bottom: 16px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3436;
+        }
+
+        .section-more {
+            color: #4ecdc4;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        /* 任务卡片 */
+        .task-card {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #4ecdc4;
+        }
+
+        .task-card.completed {
+            border-left-color: #00b894;
+            opacity: 0.7;
+            background: #e8f8f5;
+        }
+
+        .task-icon {
+            font-size: 32px;
+            margin-right: 12px;
+        }
+
+        .task-info {
+            flex: 1;
+        }
+
+        .task-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #2d3436;
+            margin-bottom: 4px;
+        }
+
+        .task-time {
+            font-size: 12px;
+            color: #909399;
+        }
+
+        .task-reward {
+            font-size: 14px;
+            color: #f4c430;
+            font-weight: 600;
+        }
+
+        /* 底部导航 */
+        .tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            background: #fff;
+            padding: 8px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            z-index: 100;
+        }
+
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 20px;
+            cursor: pointer;
+            color: #b2bec3;
+        }
+
+        .tab-item.active {
+            color: #4ecdc4;
+        }
+
+        .tab-icon {
+            font-size: 24px;
+        }
+
+        .tab-text {
+            font-size: 12px;
+        }
+
+        /* 计划页 */
+        .week-view {
+            display: flex;
+            background: #fff;
+            padding: 16px 8px;
+            gap: 8px;
+            overflow-x: auto;
+        }
+
+        .day-item {
+            flex: 1;
+            min-width: 48px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 8px;
+            border-radius: 16px;
+            background: #f5f7fa;
+            cursor: pointer;
+        }
+
+        .day-item.active {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: #fff;
+        }
+
+        .day-item.active .day-label,
+        .day-item.active .day-date {
+            color: #fff;
+        }
+
+        .day-label {
+            font-size: 12px;
+            color: #909399;
+            margin-bottom: 4px;
+        }
+
+        .day-date {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3436;
+        }
+
+        .day-count {
+            font-size: 10px;
+            color: #4ecdc4;
+            background: #e8f8f5;
+            padding: 2px 8px;
+            border-radius: 8px;
+            margin-top: 4px;
+        }
+
+        /* 添加按钮 */
+        .fab {
+            position: fixed;
+            right: 24px;
+            bottom: 100px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(78, 205, 196, 0.4);
+            z-index: 10;
+        }
+
+        /* 弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            width: 100%;
+            max-width: 480px;
+            border-radius: 24px 24px 0 0;
+            padding: 24px;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #909399;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: #606266;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #e4e7ed;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .category-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px;
+            background: #f5f7fa;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+
+        .category-item.active {
+            background: #e8f8f5;
+            border-color: #4ecdc4;
+        }
+
+        .cat-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .cat-name {
+            font-size: 12px;
+            color: #606266;
+        }
+
+        /* 统计页 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 0 16px;
+            margin-bottom: 16px;
+        }
+
+        .stat-box {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px 12px;
+            text-align: center;
+        }
+
+        .stat-icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin: 0 auto 12px;
+        }
+
+        .stat-icon-box.blue { background: #e3f2fd; }
+        .stat-icon-box.green { background: #e8f5e9; }
+        .stat-icon-box.orange { background: #fff3e0; }
+
+        .stat-label-text {
+            font-size: 12px;
+            color: #636e72;
+            margin-bottom: 4px;
+        }
+
+        .stat-value-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d3436;
+        }
+
+        .duration-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 24px;
+            margin: 0 16px 16px;
+            color: #fff;
+        }
+
+        .duration-title {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 12px;
+        }
+
+        .duration-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+
+        .duration-avg {
+            font-size: 14px;
+            opacity: 0.8;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* 个人页 */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            border-radius: 0 0 24px 24px;
+            padding: 32px 24px;
+            margin-bottom: 16px;
+        }
+
+        .avatar {
+            width: 64px;
+            height: 64px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: #fff;
+            margin-right: 16px;
+        }
+
+        .profile-info h3 {
+            font-size: 20px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .role-tag {
+            display: inline-block;
+            font-size: 12px;
+            color: rgba(255,255,255,0.9);
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 12px;
+        }
+
+        .menu-list {
+            background: #fff;
+            border-radius: 16px;
+            margin: 0 16px;
+            overflow: hidden;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+        }
+
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .menu-icon-box {
+            width: 40px;
+            height: 40px;
+            background: #e8f8f5;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-right: 12px;
+        }
+
+        .menu-item.logout .menu-icon-box {
+            background: #ffebee;
+        }
+
+        .menu-text {
+            flex: 1;
+            font-size: 16px;
+            color: #2d3436;
+        }
+
+        .menu-item.logout .menu-text {
+            color: #ff6b6b;
+        }
+
+        .menu-arrow {
+            color: #c0c4cc;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-icon-big {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .empty-text {
+            color: #909399;
+            margin-bottom: 20px;
+        }
+
+        /* 提示消息 */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            z-index: 300;
+            display: none;
+        }
+
+        .toast.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- 提示消息 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 登录页 -->
+    <div class="page login-page active" id="page-login">
+        <div class="login-header">
+            <h1>欢迎回来</h1>
+            <p>继续你的学习之旅</p>
+        </div>
+        <div class="login-form">
+            <div class="input-group">
+                <span class="input-icon">📱</span>
+                <input type="tel" class="input-field" placeholder="请输入手机号" maxlength="11" id="login-phone">
+            </div>
+            <div class="input-group">
+                <span class="input-icon">🔒</span>
+                <input type="password" class="input-field" placeholder="请输入密码" id="login-password">
+            </div>
+            <button class="btn-primary" onclick="login()">登录</button>
+            <p class="link-text">还没有账号？<a href="#" onclick="showPage('register')">立即注册</a></p>
+        </div>
+    </div>
+
+    <!-- 注册页 -->
+    <div class="page login-page" id="page-register">
+        <div class="login-header">
+            <h1>创建账号</h1>
+            <p>开启学习之旅</p>
+        </div>
+        <div class="login-form">
+            <div class="input-group">
+                <span class="input-icon">📱</span>
+                <input type="tel" class="input-field" placeholder="请输入手机号" maxlength="11" id="reg-phone">
+            </div>
+            <div class="input-group">
+                <span class="input-icon">🔒</span>
+                <input type="password" class="input-field" placeholder="请输入密码（6-20位）" id="reg-password">
+            </div>
+            <div class="input-group">
+                <span class="input-icon">👤</span>
+                <input type="text" class="input-field" placeholder="请输入昵称" id="reg-nickname">
+            </div>
+            <div class="role-select">
+                <span class="role-label">选择角色：</span>
+                <div class="role-options">
+                    <div class="role-option active" onclick="selectRole(this, 'child')">
+                        <span class="role-icon">👦</span>
+                        <span class="role-text">我是孩子</span>
+                    </div>
+                    <div class="role-option" onclick="selectRole(this, 'parent')">
+                        <span class="role-icon">👨</span>
+                        <span class="role-text">我是家长</span>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-primary" onclick="register()">注册</button>
+            <p class="link-text">已有账号？<a href="#" onclick="showPage('login')">立即登录</a></p>
+        </div>
+    </div>
+
+    <!-- 首页 -->
+    <div class="page" id="page-home">
+        <div class="home-header">
+            <div class="greeting">
+                <h2 id="greeting-text">早上好，小明</h2>
+                <p>今天也要加油学习哦！</p>
+            </div>
+            <div class="star-badge">
+                <span>⭐</span>
+                <span id="star-count">128</span>
+            </div>
+        </div>
+
+        <div class="checkin-card">
+            <div>
+                <div class="checkin-days">
+                    <span class="number" id="continuous-days">7</span>
+                    <span class="label">天连续打卡</span>
+                </div>
+                <p class="checkin-tip">继续保持，创造新纪录！</p>
+            </div>
+            <button class="btn-checkin" onclick="checkIn()">立即打卡</button>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h3 class="section-title">今日任务</h3>
+                <a href="#" class="section-more" onclick="showPage('plans')">查看全部 →</a>
+            </div>
+            <div id="task-list">
+                <div class="task-card">
+                    <span class="task-icon">📐</span>
+                    <div class="task-info">
+                        <div class="task-title">数学作业</div>
+                        <div class="task-time">16:00 - 17:00</div>
+                    </div>
+                    <span class="task-reward">+5⭐</span>
+                </div>
+                <div class="task-card completed">
+                    <span class="task-icon">🔤</span>
+                    <div class="task-info">
+                        <div class="task-title">英语阅读</div>
+                        <div class="task-time">17:30 - 18:00</div>
+                    </div>
+                    <span style="color: #00b894;">已完成</span>
+                </div>
+                <div class="task-card">
+                    <span class="task-icon">🎹</span>
+                    <div class="task-info">
+                        <div class="task-title">钢琴练习</div>
+                        <div class="task-time">19:00 - 19:30</div>
+                    </div>
+                    <span class="task-reward">+4⭐</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 计划页 -->
+    <div class="page" id="page-plans">
+        <div class="home-header" style="padding-bottom: 16px;">
+            <h2 style="color: #fff;">学习计划</h2>
+        </div>
+
+        <div class="week-view">
+            <div class="day-item" onclick="selectDay(this)">
+                <span class="day-label">一</span>
+                <span class="day-date">24</span>
+                <span class="day-count">3</span>
+            </div>
+            <div class="day-item" onclick="selectDay(this)">
+                <span class="day-label">二</span>
+                <span class="day-date">25</span>
+                <span class="day-count">2</span>
+            </div>
+            <div class="day-item active" onclick="selectDay(this)">
+                <span class="day-label">三</span>
+                <span class="day-date">26</span>
+                <span class="day-count">4</span>
+            </div>
+            <div class="day-item" onclick="selectDay(this)">
+                <span class="day-label">四</span>
+                <span class="day-date">27</span>
+            </div>
+            <div class="day-item" onclick="selectDay(this)">
+                <span class="day-label">五</span>
+                <span class="day-date">28</span>
+                <span class="day-count">2</span>
+            </div>
+            <div class="day-item" onclick="selectDay(this)">
+                <span class="day-label">六</span>
+                <span class="day-date">29</span>
+                <span class="day-count">1</span>
+            </div>
+            <div class="day-item" onclick="selectDay(this)">
+                <span class="day-label">日</span>
+                <span class="day-date">30</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="task-card">
+                <span class="task-icon">📐</span>
+                <div class="task-info">
+                    <div class="task-title">数学作业</div>
+                    <div class="task-time">16:00 - 17:00</div>
+                </div>
+                <button class="btn-checkin" style="padding: 8px 16px; font-size: 14px;" onclick="completeTask(this)">打卡</button>
+            </div>
+            <div class="task-card completed">
+                <span class="task-icon">🔤</span>
+                <div class="task-info">
+                    <div class="task-title">英语阅读</div>
+                    <div class="task-time">17:30 - 18:00</div>
+                </div>
+                <span style="color: #00b894;">已完成</span>
+            </div>
+            <div class="task-card">
+                <span class="task-icon">🎹</span>
+                <div class="task-info">
+                    <div class="task-title">钢琴练习</div>
+                    <div class="task-time">19:00 - 19:30</div>
+                </div>
+                <button class="btn-checkin" style="padding: 8px 16px; font-size: 14px;" onclick="completeTask(this)">打卡</button>
+            </div>
+            <div class="task-card">
+                <span class="task-icon">📖</span>
+                <div class="task-info">
+                    <div class="task-title">语文背诵</div>
+                    <div class="task-time">20:00 - 20:30</div>
+                </div>
+                <button class="btn-checkin" style="padding: 8px 16px; font-size: 14px;" onclick="completeTask(this)">打卡</button>
+            </div>
+        </div>
+
+        <button class="fab" onclick="showModal()">+</button>
+    </div>
+
+    <!-- 统计页 -->
+    <div class="page" id="page-statistics">
+        <div class="home-header" style="padding-bottom: 16px;">
+            <h2 style="color: #fff;">学习统计</h2>
+        </div>
+
+        <div style="padding: 16px;">
+            <div style="display: flex; background: #f1f3f4; border-radius: 12px; padding: 8px; margin-bottom: 16px;">
+                <button style="flex: 1; padding: 12px; border: none; background: #fff; border-radius: 8px; font-weight: 600;">最近7天</button>
+                <button style="flex: 1; padding: 12px; border: none; background: transparent; color: #636e72;">最近30天</button>
+                <button style="flex: 1; padding: 12px; border: none; background: transparent; color: #636e72;">本学期</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-icon-box blue">📋</div>
+                <div class="stat-label-text">总任务</div>
+                <div class="stat-value-text">45</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon-box green">✅</div>
+                <div class="stat-label-text">已完成</div>
+                <div class="stat-value-text">38</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon-box orange">📊</div>
+                <div class="stat-label-text">完成率</div>
+                <div class="stat-value-text">84%</div>
+            </div>
+        </div>
+
+        <div class="duration-box">
+            <div class="duration-title">⏱️ 累计学习时长</div>
+            <div class="duration-value">128小时30分</div>
+            <div class="duration-avg">日均 4小时12分</div>
+        </div>
+
+        <div style="background: #fff; border-radius: 16px; padding: 20px; margin: 0 16px 16px;">
+            <h3 style="margin-bottom: 16px;">完成率趋势</h3>
+            <div style="height: 200px; background: #f8f9fa; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #909399;">
+                <span style="font-size: 48px;">📈</span>
+                <span>图表区域（演示版）</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 个人页 -->
+    <div class="page" id="page-profile">
+        <div class="profile-header">
+            <div class="avatar" id="profile-avatar">明</div>
+            <div class="profile-info">
+                <h3 id="profile-name">小明</h3>
+                <span class="role-tag" id="profile-role">孩子</span>
+            </div>
+            <div class="star-badge">
+                <span>⭐</span>
+                <span id="profile-stars">128</span>
+            </div>
+        </div>
+
+        <div class="stats-card" style="margin: 0 16px 16px;">
+            <div class="stat-item">
+                <span class="stat-value">7</span>
+                <span class="stat-label">连续打卡</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">38</span>
+                <span class="stat-label">完成计划</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">128h</span>
+                <span class="stat-label">学习时长</span>
+            </div>
+        </div>
+
+        <div class="menu-list">
+            <div class="menu-item" onclick="showToast('编辑资料功能开发中')">
+                <div class="menu-icon-box">✏️</div>
+                <span class="menu-text">编辑资料</span>
+                <span class="menu-arrow">→</span>
+            </div>
+            <div class="menu-item" onclick="showToast('家庭管理功能开发中')">
+                <div class="menu-icon-box">🏠</div>
+                <span class="menu-text">家庭管理</span>
+                <span class="menu-arrow">→</span>
+            </div>
+            <div class="menu-item" onclick="showToast('设置功能开发中')">
+                <div class="menu-icon-box">⚙️</div>
+                <span class="menu-text">设置</span>
+                <span class="menu-arrow">→</span>
+            </div>
+            <div class="menu-item logout" onclick="logout()">
+                <div class="menu-icon-box">🚪</div>
+                <span class="menu-text">退出登录</span>
+                <span class="menu-arrow">→</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部导航 -->
+    <nav class="tab-bar" id="tab-bar" style="display: none;">
+        <div class="tab-item active" onclick="switchTab('home', this)">
+            <span class="tab-icon">🏠</span>
+            <span class="tab-text">首页</span>
+        </div>
+        <div class="tab-item" onclick="switchTab('plans', this)">
+            <span class="tab-icon">📋</span>
+            <span class="tab-text">计划</span>
+        </div>
+        <div class="tab-item" onclick="switchTab('statistics', this)">
+            <span class="tab-icon">📊</span>
+            <span class="tab-text">统计</span>
+        </div>
+        <div class="tab-item" onclick="switchTab('profile', this)">
+            <span class="tab-icon">👤</span>
+            <span class="tab-text">我的</span>
+        </div>
+    </nav>
+
+    <!-- 添加计划弹窗 -->
+    <div class="modal" id="add-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">添加学习计划</h3>
+                <button class="btn-close" onclick="hideModal()">×</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">计划名称</label>
+                <input type="text" class="form-input" placeholder="例如：数学作业" id="plan-title">
+            </div>
+            <div class="form-group">
+                <label class="form-label">选择分类</label>
+                <div class="category-grid">
+                    <div class="category-item active" onclick="selectCategory(this)">
+                        <span class="cat-icon">📖</span>
+                        <span class="cat-name">语文</span>
+                    </div>
+                    <div class="category-item" onclick="selectCategory(this)">
+                        <span class="cat-icon">📐</span>
+                        <span class="cat-name">数学</span>
+                    </div>
+                    <div class="category-item" onclick="selectCategory(this)">
+                        <span class="cat-icon">🔤</span>
+                        <span class="cat-name">英语</span>
+                    </div>
+                    <div class="category-item" onclick="selectCategory(this)">
+                        <span class="cat-icon">🔬</span>
+                        <span class="cat-name">科学</span>
+                    </div>
+                    <div class="category-item" onclick="selectCategory(this)">
+                        <span class="cat-icon">🎨</span>
+                        <span class="cat-name">艺术</span>
+                    </div>
+                    <div class="category-item" onclick="selectCategory(this)">
+                        <span class="cat-icon">🎵</span>
+                        <span class="cat-name">音乐</span>
+                    </div>
+                    <div class="category-item" onclick="selectCategory(this)">
+                        <span class="cat-icon">⚽</span>
+                        <span class="cat-name">体育</span>
+                    </div>
+                    <div class="category-item" onclick="selectCategory(this)">
+                        <span class="cat-icon">📚</span>
+                        <span class="cat-name">阅读</span>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-primary" onclick="addPlan()">确认添加</button>
+        </div>
+    </div>
+
+    <script>
+        // 当前用户数据
+        let currentUser = null;
+        let selectedRole = 'child';
+
+        // 显示页面
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageName).classList.add('active');
+            
+            // 控制底部导航显示
+            const tabBar = document.getElementById('tab-bar');
+            if (pageName === 'login' || pageName === 'register') {
+                tabBar.style.display = 'none';
+            } else {
+                tabBar.style.display = 'flex';
+            }
+        }
+
+        // 切换底部标签
+        function switchTab(pageName, element) {
+            showPage(pageName);
+            document.querySelectorAll('.tab-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // 选择角色
+        function selectRole(element, role) {
+            document.querySelectorAll('.role-option').forEach(opt => opt.classList.remove('active'));
+            element.classList.add('active');
+            selectedRole = role;
+        }
+
+        // 选择日期
+        function selectDay(element) {
+            document.querySelectorAll('.day-item').forEach(d => d.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // 选择分类
+        function selectCategory(element) {
+            document.querySelectorAll('.category-item').forEach(c => c.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // 显示提示
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // 登录
+        function login() {
+            const phone = document.getElementById('login-phone').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!phone || phone.length !== 11) {
+                showToast('请输入正确的手机号');
+                return;
+            }
+            if (!password) {
+                showToast('请输入密码');
+                return;
+            }
+
+            // 模拟登录成功
+            currentUser = {
+                nickname: '小明',
+                role: 'child',
+                stars: 128
+            };
+            
+            updateProfile();
+            showToast('登录成功！');
+            setTimeout(() => {
+                showPage('home');
+                updateGreeting();
+            }, 500);
+        }
+
+        // 注册
+        function register() {
+            const phone = document.getElementById('reg-phone').value;
+            const password = document.getElementById('reg-password').value;
+            const nickname = document.getElementById('reg-nickname').value;
+            
+            if (!phone || phone.length !== 11) {
+                showToast('请输入正确的手机号');
+                return;
+            }
+            if (!password || password.length < 6) {
+                showToast('密码长度不能少于6位');
+                return;
+            }
+            if (!nickname) {
+                showToast('请输入昵称');
+                return;
+            }
+
+            // 模拟注册成功
+            currentUser = {
+                nickname: nickname,
+                role: selectedRole,
+                stars: 0
+            };
+            
+            updateProfile();
+            showToast('注册成功！');
+            setTimeout(() => {
+                showPage('home');
+                updateGreeting();
+            }, 500);
+        }
+
+        // 更新个人信息显示
+        function updateProfile() {
+            if (!currentUser) return;
+            
+            document.getElementById('profile-name').textContent = currentUser.nickname;
+            document.getElementById('profile-avatar').textContent = currentUser.nickname.charAt(0);
+            document.getElementById('profile-role').textContent = currentUser.role === 'parent' ? '家长' : '孩子';
+            document.getElementById('profile-stars').textContent = currentUser.stars;
+            document.getElementById('star-count').textContent = currentUser.stars;
+            document.getElementById('greeting-text').textContent = getGreeting() + '，' + currentUser.nickname;
+        }
+
+        // 获取问候语
+        function getGreeting() {
+            const hour = new Date().getHours();
+            if (hour < 12) return '早上好';
+            if (hour < 18) return '下午好';
+            return '晚上好';
+        }
+
+        // 更新问候
+        function updateGreeting() {
+            if (currentUser) {
+                document.getElementById('greeting-text').textContent = getGreeting() + '，' + currentUser.nickname;
+            }
+        }
+
+        // 打卡
+        function checkIn() {
+            const btn = event.target;
+            btn.textContent = '已打卡';
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            
+            // 增加星星
+            if (currentUser) {
+                currentUser.stars += 5;
+                updateProfile();
+            }
+            
+            // 增加连续天数
+            const daysEl = document.getElementById('continuous-days');
+            daysEl.textContent = parseInt(daysEl.textContent) + 1;
+            
+            showToast('打卡成功！+5⭐');
+        }
+
+        // 完成任务
+        function completeTask(btn) {
+            const card = btn.closest('.task-card');
+            card.classList.add('completed');
+            btn.outerHTML = '<span style="color: #00b894;">已完成</span>';
+            
+            if (currentUser) {
+                currentUser.stars += 3;
+                updateProfile();
+            }
+            
+            showToast('任务完成！+3⭐');
+        }
+
+        // 显示弹窗
+        function showModal() {
+            document.getElementById('add-modal').classList.add('show');
+        }
+
+        // 隐藏弹窗
+        function hideModal() {
+            document.getElementById('add-modal').classList.remove('show');
+        }
+
+        // 添加计划
+        function addPlan() {
+            const title = document.getElementById('plan-title').value;
+            if (!title) {
+                showToast('请输入计划名称');
+                return;
+            }
+            
+            hideModal();
+            document.getElementById('plan-title').value = '';
+            showToast('添加成功！');
+        }
+
+        // 退出登录
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                currentUser = null;
+                showPage('login');
+                showToast('已退出登录');
+            }
+        }
+
+        // 点击弹窗外部关闭
+        document.getElementById('add-modal').addEventListener('click', function(e) {
+            if (e.target === this) hideModal();
+        });
+
+        // 初始化
+        updateGreeting();
+    </script>
+</body>
+</html>

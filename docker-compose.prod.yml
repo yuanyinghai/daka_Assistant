@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: daka-postgres
+    environment:
+      POSTGRES_DB: daka_db
+      POSTGRES_USER: daka_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-daka_password_2024}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - daka-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U daka_user -d daka_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: daka-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - daka-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # 后端 API
+  backend:
+    build:
+      context: ./daka-backend
+      dockerfile: Dockerfile.prod
+    container_name: daka-backend
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: daka_user
+      DB_PASSWORD: ${DB_PASSWORD:-daka_password_2024}
+      DB_DATABASE: daka_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - daka-network
+    restart: unless-stopped
+
+  # 前端 Nginx
+  frontend:
+    build:
+      context: ./daka-web
+      dockerfile: Dockerfile
+    container_name: daka-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    networks:
+      - daka-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  daka-network:
+    driver: bridge

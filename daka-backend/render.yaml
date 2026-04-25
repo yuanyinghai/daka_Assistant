@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: daka-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        fromDatabase:
+          name: daka-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: daka-postgres
+          property: port
+      - key: DB_USERNAME
+        fromDatabase:
+          name: daka-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: daka-postgres
+          property: password
+      - key: DB_DATABASE
+        fromDatabase:
+          name: daka-postgres
+          property: database
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: daka-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000
+
+databases:
+  - name: daka-postgres
+    plan: free
+    databaseName: daka_db
+    user: daka_user
+
+redis:
+  - name: daka-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
