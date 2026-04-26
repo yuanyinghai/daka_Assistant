@@ -8,7 +8,7 @@
       </div>
       <div class="star-badge">
         <span class="star-icon">⭐</span>
-        <span class="star-count">{{ userStore.starBalance }}</span>
+        <span class="star-count">{{ totalStars }}</span>
       </div>
     </header>
 
@@ -16,51 +16,19 @@
     <div class="checkin-card">
       <div class="checkin-info">
         <div class="checkin-days">
-          <span class="days-number">{{ stats.continuousDays || 0 }}</span>
+          <span class="days-number">{{ continuousDays }}</span>
           <span class="days-label">天连续打卡</span>
         </div>
         <p class="checkin-tip">继续保持，创造新纪录！</p>
       </div>
-      <button class="checkin-btn" @click="handleCheckIn()" :disabled="loading">
-        {{ loading ? '打卡中...' : '立即打卡' }}
-      </button>
-    </div>
-
-    <!-- 智能提醒 -->
-    <div v-if="reminders.length > 0" class="reminders-section">
-      <div
-        v-for="reminder in reminders"
-        :key="reminder.title"
-        class="reminder-card"
-        :class="reminder.type"
+      <button 
+        class="checkin-btn" 
+        @click="handleQuickCheckIn" 
+        :disabled="loading || pendingTasks.length === 0"
+        v-if="userStore.userRole === 'child'"
       >
-        <div class="reminder-content">
-          <h4>{{ reminder.title }}</h4>
-          <p>{{ reminder.message }}</p>
-        </div>
-        <button v-if="reminder.action" class="reminder-action" @click="handleReminderAction(reminder)">
-          {{ reminder.action }}
-        </button>
-      </div>
-    </div>
-
-    <!-- AI 学习建议 -->
-    <div v-if="advice.length > 0" class="advice-section">
-      <div class="section-header">
-        <h2>💡 AI 学习建议</h2>
-      </div>
-      <div class="advice-list">
-        <div
-          v-for="(item, index) in advice.slice(0, 2)"
-          :key="index"
-          class="advice-card"
-          :class="item.type"
-        >
-          <h4>{{ item.title }}</h4>
-          <p>{{ item.content }}</p>
-          <span v-if="item.action" class="advice-action">{{ item.action }}</span>
-        </div>
-      </div>
+        {{ loading ? '打卡中...' : '一键打卡' }}
+      </button>
     </div>
 
     <!-- 今日任务 -->
@@ -73,7 +41,7 @@
       <div class="task-list">
         <div v-if="tasks.length === 0" class="empty-tasks">
           <p>今天还没有计划哦</p>
-          <router-link to="/plans" class="add-btn">添加计划</router-link>
+          <router-link v-if="userStore.userRole === 'parent'" to="/plans" class="add-btn">添加计划</router-link>
         </div>
         
         <div
@@ -88,18 +56,23 @@
             <p>{{ task.time }}</p>
           </div>
           <button
-            v-if="!task.isCompleted && task.recordId"
+            v-if="!task.isCompleted && userStore.userRole === 'child'"
             class="checkin-btn-small"
             @click="handleCheckIn(task)"
             :disabled="loading"
           >
             打卡
           </button>
-          <div v-else class="task-reward">
-            {{ task.isCompleted ? '已完成' : '+' + task.stars + '⭐' }}
-          </div>
+          <span v-else-if="task.isCompleted" class="task-status">已完成</span>
+          <span v-else class="task-reward">+{{ task.stars }}⭐</span>
         </div>
       </div>
+    </div>
+
+    <!-- 角色提示 -->
+    <div class="role-info">
+      <span v-if="userStore.userRole === 'parent'" class="role-badge parent">家长模式 - 可以创建计划</span>
+      <span v-else class="role-badge child">孩子模式 - 可以打卡学习</span>
     </div>
 
     <!-- 底部导航 -->
@@ -128,19 +101,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { getUserStatistics } from '@/api/user'
-import { getTodayPlans } from '@/api/study-plan'
-import { checkIn } from '@/api/plan-record'
-import { getLearningAdvice, getSmartReminders } from '@/api/ai'
-import type { StudyPlan } from '@/api/study-plan'
-import type { LearningAdvice, SmartReminder } from '@/api/ai'
+import { studyPlanApi, planRecordApi, starsApi } from '@/utils/supabase'
 
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(false)
-
-const advice = ref<LearningAdvice[]>([])
-const reminders = ref<SmartReminder[]>([])
+const totalStars = ref(0)
+const continuousDays = ref(0)
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -149,135 +116,132 @@ const greeting = computed(() => {
   return '晚上好'
 })
 
-const stats = ref({
-  continuousDays: 0,
-  totalCompletedPlans: 0
-})
+const tasks = ref<any[]>([])
 
-const tasks = ref<Array<StudyPlan & { icon: string; isCompleted: boolean }>>([])
+// 待打卡任务
+const pendingTasks = computed(() => tasks.value.filter(t => !t.isCompleted))
 
 // 科目图标映射
 const categoryIcons: Record<string, string> = {
-  chinese: '📖',
-  math: '📐',
-  english: '🔤',
-  science: '🔬',
-  art: '🎨',
-  music: '🎵',
-  sports: '⚽',
-  reading: '📚',
-  other: '📋'
+  '语文': '📖',
+  '数学': '📐',
+  '英语': '🔤',
+  '科学': '🔬',
+  '艺术': '🎨',
+  '音乐': '🎵',
+  '体育': '⚽',
+  '阅读': '📚',
+  '其他': '📋'
 }
 
 // 加载今日计划
 const loadTodayPlans = async () => {
+  if (!userStore.userInfo?.id) return
+  
   try {
-    const data = await getTodayPlans()
-    tasks.value = data.map(plan => ({
-      ...plan,
-      icon: categoryIcons[plan.category] || '📋',
-      isCompleted: plan.recordStatus === 'completed',
-      time: `${plan.startTime} - ${plan.endTime}`,
-      stars: plan.rewardStars
-    }))
+    const today = new Date().toISOString().split('T')[0]
+    const plans = await studyPlanApi.getPlans(userStore.userInfo.id)
+    const records = await planRecordApi.getRecords(userStore.userInfo.id, today)
+    
+    tasks.value = plans.map((plan: any) => {
+      const record = records.find((r: any) => r.plan_id === plan.id)
+      return {
+        id: plan.id,
+        title: plan.title,
+        icon: categoryIcons[plan.category] || '📋',
+        isCompleted: record?.status === 'completed',
+        recordId: record?.id,
+        time: `${plan.start_time || '16:00'} - ${plan.end_time || '17:00'}`,
+        stars: plan.reward_stars
+      }
+    })
   } catch (error) {
     console.error('加载今日计划失败:', error)
   }
 }
 
-// 打卡
-const handleCheckIn = async (task?: typeof tasks.value[0]) => {
-  if (!task) {
-    // 一键打卡所有待完成任务
-    const pendingTasks = tasks.value.filter(t => !t.isCompleted && t.recordId)
-    if (pendingTasks.length === 0) {
-      alert('今天没有待打卡的任务')
-      return
-    }
-    
-    loading.value = true
-    try {
-      for (const t of pendingTasks) {
-        await checkIn(t.recordId!)
-      }
-      alert(`打卡成功！+${pendingTasks.reduce((sum, t) => sum + t.rewardStars, 0)}⭐`)
-      await loadTodayPlans()
-      // 刷新用户统计
-      const data = await getUserStatistics()
-      stats.value = data
-      userStore.setUserInfo({ ...userStore.userInfo!, starBalance: data.starBalance })
-    } catch (error: any) {
-      alert(error.message || '打卡失败')
-    } finally {
-      loading.value = false
-    }
-  } else if (task.recordId) {
-    // 单个任务打卡
-    loading.value = true
-    try {
-      await checkIn(task.recordId)
-      alert(`打卡成功！+${task.rewardStars}⭐`)
-      await loadTodayPlans()
-      // 刷新用户统计
-      const data = await getUserStatistics()
-      stats.value = data
-      userStore.setUserInfo({ ...userStore.userInfo!, starBalance: data.starBalance })
-    } catch (error: any) {
-      alert(error.message || '打卡失败')
-    } finally {
-      loading.value = false
-    }
-  }
-}
-
-// 处理提醒动作
-const handleReminderAction = (reminder: SmartReminder) => {
-  if (reminder.action?.includes('打卡') || reminder.action?.includes('计划')) {
-    router.push('/plans')
-  } else if (reminder.action?.includes('加油')) {
-    // 滚动到任务区域
-    document.querySelector('.today-tasks')?.scrollIntoView({ behavior: 'smooth' })
-  }
-}
-
-onMounted(async () => {
-  userStore.initFromStorage()
+// 加载星星总数
+const loadTotalStars = async () => {
+  if (!userStore.userInfo?.id) return
+  
   try {
-    const [statsData, adviceData, remindersData] = await Promise.all([
-      getUserStatistics(),
-      getLearningAdvice(),
-      getSmartReminders(),
-      loadTodayPlans()
-    ])
-    stats.value = statsData
-    advice.value = adviceData
-    reminders.value = remindersData
-  } catch {
-    // 使用默认值
+    totalStars.value = await starsApi.getTotal(userStore.userInfo.id)
+  } catch (error) {
+    console.error('加载星星失败:', error)
   }
+}
+
+// 打卡
+const handleCheckIn = async (task: any) => {
+  if (!userStore.userInfo?.id) return
+  
+  loading.value = true
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    
+    // 创建打卡记录
+    await planRecordApi.createRecord({
+      plan_id: task.id,
+      user_id: userStore.userInfo.id,
+      record_date: today,
+      status: 'pending',
+      earned_stars: task.stars
+    })
+    
+    task.isCompleted = true
+    alert(`打卡成功！获得 ${task.stars} 颗星星（待家长审核）`)
+  } catch (error: any) {
+    alert('打卡失败：' + error.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 一键打卡所有待完成任务
+const handleQuickCheckIn = async () => {
+  if (pendingTasks.value.length === 0) {
+    alert('今天没有待打卡的任务')
+    return
+  }
+  
+  loading.value = true
+  try {
+    for (const task of pendingTasks.value) {
+      await handleCheckIn(task)
+    }
+    alert('一键打卡完成！')
+  } catch (error: any) {
+    alert('打卡失败：' + error.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadTodayPlans()
+  loadTotalStars()
 })
 </script>
 
 <style scoped>
 .home-page {
   min-height: 100vh;
-  background: #f8f9fa;
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
   padding-bottom: 5rem;
 }
 
 .home-header {
+  padding: 2rem 1.5rem;
+  color: white;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-  color: #ffffff;
 }
 
 .greeting h1 {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .greeting p {
@@ -288,7 +252,6 @@ onMounted(async () => {
 .star-badge {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
   background: rgba(255, 255, 255, 0.2);
   padding: 0.5rem 1rem;
   border-radius: 2rem;
@@ -296,43 +259,44 @@ onMounted(async () => {
 
 .star-icon {
   font-size: 1.25rem;
+  margin-right: 0.25rem;
 }
 
 .star-count {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 600;
 }
 
 .checkin-card {
-  margin: -1.5rem 1rem 1rem;
-  background: #ffffff;
+  margin: 0 1rem 1.5rem;
+  background: white;
   border-radius: 1rem;
   padding: 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .checkin-days {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .days-number {
   font-size: 2.5rem;
-  font-weight: bold;
+  font-weight: 700;
   color: #4ecdc4;
 }
 
 .days-label {
-  font-size: 1rem;
+  font-size: 0.875rem;
   color: #606266;
 }
 
 .checkin-tip {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #909399;
   margin-top: 0.25rem;
 }
@@ -340,148 +304,25 @@ onMounted(async () => {
 .checkin-btn {
   padding: 0.75rem 1.5rem;
   background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-  color: #ffffff;
+  color: white;
   border: none;
   border-radius: 2rem;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
+  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
 }
 
 .checkin-btn:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
-}
-
-.checkin-btn-small {
-  padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-  color: #ffffff;
-  border: none;
-  border-radius: 1.5rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-}
-
-.checkin-btn-small:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.reminders-section {
-  padding: 0 1rem;
-  margin-bottom: 1rem;
-}
-
-.reminder-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #fff;
-  border-radius: 1rem;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  border-left: 4px solid #4ecdc4;
-}
-
-.reminder-card.urgent {
-  border-left-color: #ff6b6b;
-  background: #fff5f5;
-}
-
-.reminder-card.suggestion {
-  border-left-color: #f4c430;
-  background: #fffbf0;
-}
-
-.reminder-card.motivation {
-  border-left-color: #00b894;
-  background: #f0fff4;
-}
-
-.reminder-content h4 {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #2d3436;
-  margin-bottom: 0.25rem;
-}
-
-.reminder-content p {
-  font-size: 0.8rem;
-  color: #636e72;
-}
-
-.reminder-action {
-  padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-  color: #fff;
-  border: none;
-  border-radius: 1.5rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.advice-section {
-  padding: 0 1rem;
-  margin-bottom: 1rem;
-}
-
-.advice-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.advice-card {
-  background: #fff;
-  border-radius: 1rem;
-  padding: 1rem;
-  border-left: 4px solid #4ecdc4;
-}
-
-.advice-card.strength {
-  border-left-color: #00b894;
-  background: #f0fff4;
-}
-
-.advice-card.weakness {
-  border-left-color: #ff6b6b;
-  background: #fff5f5;
-}
-
-.advice-card.suggestion {
-  border-left-color: #f4c430;
-  background: #fffbf0;
-}
-
-.advice-card.encouragement {
-  border-left-color: #667eea;
-  background: #f0f4ff;
-}
-
-.advice-card h4 {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #2d3436;
-  margin-bottom: 0.5rem;
-}
-
-.advice-card p {
-  font-size: 0.85rem;
-  color: #636e72;
-  line-height: 1.5;
-  margin-bottom: 0.5rem;
-}
-
-.advice-action {
-  font-size: 0.8rem;
-  color: #4ecdc4;
-  font-weight: 500;
 }
 
 .today-tasks {
-  padding: 0 1rem;
+  background: white;
+  border-radius: 1.5rem 1.5rem 0 0;
+  padding: 1.5rem;
+  min-height: 50vh;
 }
 
 .section-header {
@@ -512,12 +353,10 @@ onMounted(async () => {
 .empty-tasks {
   text-align: center;
   padding: 3rem 1rem;
-  background: #ffffff;
-  border-radius: 1rem;
+  color: #909399;
 }
 
 .empty-tasks p {
-  color: #909399;
   margin-bottom: 1rem;
 }
 
@@ -525,29 +364,27 @@ onMounted(async () => {
   display: inline-block;
   padding: 0.5rem 1.5rem;
   background: #4ecdc4;
-  color: #ffffff;
-  text-decoration: none;
+  color: white;
   border-radius: 2rem;
-  font-size: 0.9rem;
+  text-decoration: none;
+  font-size: 0.875rem;
 }
 
 .task-item {
   display: flex;
   align-items: center;
-  background: #ffffff;
   padding: 1rem;
+  background: #f8f9fa;
   border-radius: 1rem;
-  border-left: 4px solid #4ecdc4;
 }
 
 .task-item.completed {
-  border-left-color: #00b894;
-  opacity: 0.7;
+  opacity: 0.6;
   background: #e8f8f5;
 }
 
 .task-icon {
-  font-size: 1.75rem;
+  font-size: 2rem;
   margin-right: 0.75rem;
 }
 
@@ -563,14 +400,56 @@ onMounted(async () => {
 }
 
 .task-content p {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #909399;
 }
 
+.checkin-btn-small {
+  padding: 0.5rem 1rem;
+  background: #4ecdc4;
+  color: white;
+  border: none;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.checkin-btn-small:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.task-status {
+  font-size: 0.875rem;
+  color: #00b894;
+}
+
 .task-reward {
-  font-size: 0.9rem;
-  color: #f4c430;
-  font-weight: 600;
+  font-size: 0.875rem;
+  color: #f39c12;
+  font-weight: 500;
+}
+
+.role-info {
+  padding: 1rem;
+  text-align: center;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+}
+
+.role-badge.parent {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.role-badge.child {
+  background: #e8f5e9;
+  color: #388e3c;
 }
 
 .tab-bar {
@@ -580,39 +459,30 @@ onMounted(async () => {
   right: 0;
   display: flex;
   justify-content: space-around;
-  background: #ffffff;
+  background: white;
   padding: 0.5rem 0;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-  z-index: 100;
-}
-
-@media (min-width: 768px) {
-  .tab-bar {
-    max-width: 480px;
-    margin: 0 auto;
-  }
 }
 
 .tab-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  color: #909399;
   text-decoration: none;
-  color: #b2bec3;
-  padding: 0.25rem 1rem;
 }
 
-.tab-item.active,
-.tab-item.router-link-active {
+.tab-item.active {
   color: #4ecdc4;
 }
 
 .tab-icon {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
 }
 
 .tab-text {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
 }
 </style>
