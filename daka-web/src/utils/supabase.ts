@@ -3,6 +3,13 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
+console.log('Supabase URL:', supabaseUrl ? '已设置' : '未设置')
+console.log('Supabase Key:', supabaseKey ? '已设置' : '未设置')
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('错误：Supabase 环境变量未设置！')
+}
+
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
 // 用户相关操作
