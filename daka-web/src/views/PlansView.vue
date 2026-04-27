@@ -163,25 +163,6 @@
       </div>
     </div>
 
-    <!-- 底部导航 -->
-    <nav class="bottom-nav">
-      <router-link to="/" class="tab-item">
-        <span class="tab-icon">🏠</span>
-        <span class="tab-text">首页</span>
-      </router-link>
-      <router-link to="/plans" class="tab-item active">
-        <span class="tab-icon">📋</span>
-        <span class="tab-text">计划</span>
-      </router-link>
-      <router-link to="/statistics" class="tab-item">
-        <span class="tab-icon">📊</span>
-        <span class="tab-text">统计</span>
-      </router-link>
-      <router-link to="/profile" class="tab-item">
-        <span class="tab-icon">👤</span>
-        <span class="tab-text">我的</span>
-      </router-link>
-    </nav>
   </div>
 </template>
 
@@ -362,8 +343,8 @@ const addPlan = async () => {
       user_id: userStore.userInfo.id,
       title: newPlan.title,
       category: category?.name || '其他',
-      start_time: newPlan.startTime,
-      end_time: newPlan.endTime,
+      startTime: newPlan.startTime,
+      endTime: newPlan.endTime,
       reward_stars: newPlan.stars,
       is_active: true
     })

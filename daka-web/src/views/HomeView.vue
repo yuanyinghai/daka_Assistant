@@ -74,26 +74,6 @@
       <span v-if="userStore.userRole === 'parent'" class="role-badge parent">家长模式 - 可以创建计划</span>
       <span v-else class="role-badge child">孩子模式 - 可以打卡学习</span>
     </div>
-
-    <!-- 底部导航 -->
-    <nav class="tab-bar safe-area-bottom">
-      <router-link to="/" class="tab-item active">
-        <span class="tab-icon">🏠</span>
-        <span class="tab-text">首页</span>
-      </router-link>
-      <router-link to="/plans" class="tab-item">
-        <span class="tab-icon">📋</span>
-        <span class="tab-text">计划</span>
-      </router-link>
-      <router-link to="/statistics" class="tab-item">
-        <span class="tab-icon">📊</span>
-        <span class="tab-text">统计</span>
-      </router-link>
-      <router-link to="/profile" class="tab-item">
-        <span class="tab-icon">👤</span>
-        <span class="tab-text">我的</span>
-      </router-link>
-    </nav>
   </div>
 </template>
 
