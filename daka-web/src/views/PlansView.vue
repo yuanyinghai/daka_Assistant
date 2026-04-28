@@ -344,7 +344,11 @@ const addPlan = async () => {
       title: newPlan.title,
       category: category?.name || '其他',
       subject: category?.name || '其他',
-      reward_stars: newPlan.stars
+      start_date: weekDays.value[selectedDay.value].fullDate,
+      start_time: newPlan.startTime,
+      duration: 60,
+      reward_stars: newPlan.stars,
+      is_active: true
     })
     
     alert('添加成功！')
