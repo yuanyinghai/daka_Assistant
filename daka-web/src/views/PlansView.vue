@@ -343,8 +343,8 @@ const addPlan = async () => {
       user_id: userStore.userInfo.id,
       title: newPlan.title,
       category: category?.name || '其他',
-      startTime: newPlan.startTime,
-      endTime: newPlan.endTime,
+      start_time: newPlan.startTime,
+      end_time: newPlan.endTime,
       reward_stars: newPlan.stars,
       is_active: true
     })
